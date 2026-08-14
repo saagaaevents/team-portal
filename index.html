@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0A3F34">
+<title>Saga Events — Team Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --teal-900:#0A3F34; --teal-700:#0F6E56; --teal-600:#12856A; --teal-100:#CFEEE3; --teal-50:#EAF7F2;
+    --coral-700:#A6472F; --coral-600:#C1573A; --coral-100:#F6DCD3;
+    --cream:#FBF9F4; --ink:#1F2420; --ink-soft:#5B665F; --line:#DCE4DE; --white:#FFFFFF;
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    --safe-t: env(safe-area-inset-top, 0px);
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html{ -webkit-text-size-adjust:100%; }
+  body{
+    margin:0; background:var(--cream); color:var(--ink); font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased;
+    min-height:100vh; padding:calc(20px + var(--safe-t)) 16px calc(110px + var(--safe-b));
+  }
+  .page{max-width:520px; margin:0 auto;}
+  .eyebrow{ display:flex; align-items:center; gap:8px; font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--teal-600); margin-bottom:6px; }
+  .eyebrow .dot{width:6px; height:6px; border-radius:50%; background:var(--coral-600); flex:none;}
+  h1{ font-family:'Space Grotesk',sans-serif; font-size:23px; font-weight:700; margin:0 0 4px; color:var(--teal-900); letter-spacing:-.01em; }
+  .lede{color:var(--ink-soft); font-size:13.5px; margin:0 0 18px; line-height:1.55;}
+
+  .mode-switch{ display:flex; gap:8px; margin-bottom:16px; }
+  .mode-btn{
+    flex:1; text-align:center; padding:13px 10px; border-radius:12px; cursor:pointer;
+    font-family:'Space Grotesk',sans-serif; font-size:13.5px; font-weight:600;
+    background:var(--white); border:1.5px solid var(--line); color:var(--ink-soft);
+    min-height:48px; display:flex; align-items:center; justify-content:center; gap:6px;
+  }
+  .mode-btn.active{ background:var(--teal-900); border-color:var(--teal-900); color:#fff; }
+  .mode-btn .step-num{ font-size:10.5px; opacity:.7; background:rgba(0,0,0,.12); border-radius:999px; padding:1px 7px; }
+  .mode-btn.active .step-num{ background:rgba(255,255,255,.22); }
+
+  .ticket{ background:var(--white); border-radius:16px; box-shadow:0 1px 2px rgba(15,40,32,.04), 0 10px 24px -14px rgba(15,40,32,.18); overflow:hidden; border:1px solid var(--line); }
+  .ticket-head{ background:linear-gradient(135deg, var(--teal-700), var(--teal-600)); padding:16px 18px; display:flex; align-items:center; justify-content:space-between; }
+  .ticket-head h2{ font-family:'Space Grotesk',sans-serif; color:#fff; font-size:15px; font-weight:600; margin:0; }
+  .ticket-head .step-tag{ font-family:'Space Grotesk',sans-serif; color:var(--teal-100); font-size:10.5px; font-weight:500; letter-spacing:.05em; }
+
+  .perf{ position:relative; height:0; }
+  .perf::before{ content:""; position:absolute; top:-1px; left:0; right:0; height:2px; background-image:radial-gradient(circle, var(--cream) 2.5px, transparent 2.6px); background-size:14px 100%; background-repeat:repeat-x; }
+  .notch{ position:absolute; top:-11px; width:22px; height:22px; border-radius:50%; background:var(--cream); border:1px solid var(--line); }
+  .notch.left{left:-11px;} .notch.right{right:-11px;}
+
+  .tabs{ display:flex; gap:6px; padding:16px 18px 0; }
+  .tab{ flex:1; text-align:center; padding:12px 8px; border-radius:10px; font-family:'Space Grotesk',sans-serif; font-size:13.5px; font-weight:600; color:var(--ink-soft); background:var(--teal-50); cursor:pointer; border:1px solid transparent; min-height:44px; display:flex; align-items:center; justify-content:center; }
+  .tab.active{ background:var(--teal-900); color:#fff; }
+
+  .panel{ padding:18px 18px 20px; display:none; }
+  .panel.active{ display:block; }
+  .body-pad{ padding:18px 18px 20px; }
+
+  .field{ margin-bottom:15px; }
+  .field label{ display:block; font-size:12.5px; font-weight:600; color:var(--teal-900); margin-bottom:6px; }
+  .field-hint{ font-size:11.5px; color:var(--ink-soft); margin-top:6px; }
+
+  input[type=text], input[type=tel], input[type=number], input[type=date], select, textarea{
+    width:100%; padding:13px 12px; border-radius:9px; border:1.5px solid var(--line);
+    font-family:'Inter',sans-serif; font-size:16px; color:var(--ink); background:var(--cream);
+    min-height:48px; -webkit-appearance:none; appearance:none;
+  }
+  select{
+    background-image:url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235B665F' stroke-width='2'%3e%3cpath d='M6 9l6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat:no-repeat; background-position:right 12px center; background-size:18px; padding-right:38px;
+  }
+  input:focus, select:focus, textarea:focus{ outline:none; border-color:var(--teal-600); background:#fff; }
+  textarea{resize:vertical; min-height:64px;}
+
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  @media (max-width:380px){ .row2{ grid-template-columns:1fr; } }
+
+  .privacy-note, .zoho-note{ display:flex; gap:8px; align-items:flex-start; background:var(--teal-50); border:1px solid var(--teal-100); border-radius:10px; padding:10px 12px; margin-top:14px; font-size:11.5px; color:var(--teal-900); line-height:1.5; }
+  .privacy-note svg, .zoho-note svg{flex:none; margin-top:2px;}
+
+  .search-box{ position:relative; margin-bottom:14px; }
+  .search-box input{ padding-left:40px; }
+  .search-box svg{ position:absolute; left:13px; top:50%; transform:translateY(-50%); }
+  .result-list{ display:flex; flex-direction:column; gap:8px; max-height:min(320px, 50vh); overflow-y:auto; -webkit-overflow-scrolling:touch; }
+  .result-card{ border:1px solid var(--line); border-radius:10px; padding:12px 13px; cursor:pointer; background:var(--cream); min-height:44px; }
+  .result-card:active{ border-color:var(--teal-600); }
+  .result-card .rid{ font-family:'Space Grotesk',sans-serif; font-size:11.5px; font-weight:600; color:var(--coral-600); letter-spacing:.03em; }
+  .result-card .rname{ font-size:14.5px; font-weight:600; color:var(--teal-900); margin:2px 0; }
+  .result-card .rmeta{ font-size:12px; color:var(--ink-soft); }
+  .empty-state{ text-align:center; padding:26px 10px; color:var(--ink-soft); font-size:13px; }
+
+  .selected-chip{ display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--teal-50); border:1px solid var(--teal-100); border-radius:12px; padding:13px 14px; margin-bottom:18px; }
+  .selected-chip .info .rid{ font-family:'Space Grotesk',sans-serif; font-size:11px; font-weight:600; color:var(--coral-600); }
+  .selected-chip .info .rname{ font-size:14.5px; font-weight:600; color:var(--teal-900); margin-top:2px; }
+  .selected-chip button{ background:none; border:none; color:var(--teal-700); font-size:12.5px; font-weight:600; cursor:pointer; text-decoration:underline; padding:6px; min-height:32px; }
+
+  .success{ display:none; text-align:center; padding:26px 18px 8px; }
+  .success.active{ display:block; }
+  .success .badge{ width:52px; height:52px; border-radius:50%; background:var(--teal-50); display:flex; align-items:center; justify-content:center; margin:0 auto 14px; }
+  .success h3{ font-family:'Space Grotesk',sans-serif; color:var(--teal-900); font-size:17px; margin:0 0 6px; }
+  .success .id-chip{ display:inline-block; margin:8px 0 14px; padding:9px 18px; border-radius:999px; background:var(--teal-900); color:#fff; font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; letter-spacing:.03em; }
+  .success p{ font-size:13px; color:var(--ink-soft); line-height:1.6; margin:0 0 18px; }
+  .success .row{ display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px dashed var(--line); font-size:13.5px; text-align:left; }
+  .success .row span:first-child{ color:var(--ink-soft); }
+  .success .row span:last-child{ font-weight:600; color:var(--teal-900); }
+  .success .zoho-warning{ background:var(--coral-100); color:var(--coral-700); border-radius:10px; padding:11px 12px; font-size:12.5px; margin-top:14px; text-align:left; line-height:1.5; }
+  .success button{ background:transparent; border:1.5px solid var(--teal-700); color:var(--teal-700); padding:12px 20px; border-radius:9px; font-family:'Space Grotesk',sans-serif; font-size:13.5px; font-weight:600; cursor:pointer; min-height:44px; }
+
+  .status-msg{ font-size:12.5px; margin-top:8px; text-align:center; min-height:16px; }
+  .status-msg.error{ color:var(--coral-700); }
+  .status-msg.loading{ color:var(--ink-soft); }
+
+  .action-bar{ position:fixed; left:0; right:0; bottom:0; z-index:20; background:linear-gradient(to top, var(--cream) 60%, rgba(251,249,244,0)); padding:18px 16px calc(14px + var(--safe-b)); display:none; }
+  .action-bar.show{ display:block; }
+  .action-bar-inner{ max-width:520px; margin:0 auto; }
+  .submit-btn{ width:100%; padding:15px; background:var(--coral-600); color:#fff; border:none; border-radius:12px; font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; cursor:pointer; min-height:52px; box-shadow:0 6px 16px -6px rgba(166,71,47,.5); }
+  .submit-btn:active{ background:var(--coral-700); transform:scale(.99); }
+  .submit-btn:disabled{ background:#C9C2BC; box-shadow:none; cursor:not-allowed; }
+
+  footer{ text-align:center; margin-top:18px; font-size:11px; color:var(--ink-soft); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="eyebrow"><span class="dot"></span>SAGA EVENTS &amp; HOLIDAYS</div>
+  <h1>Team portal</h1>
+  <p class="lede">One place for the pipeline so far — log a lead, or close a deal. More stages get added here as they're built.</p>
+
+  <div class="mode-switch">
+    <div class="mode-btn active" data-mode="lead" onclick="setMode('lead')">Lead capture <span class="step-num">1–3</span></div>
+    <div class="mode-btn" data-mode="deal" onclick="setMode('deal')">Deal closure <span class="step-num">6</span></div>
+  </div>
+
+  <div class="ticket">
+
+    <div id="mode-lead">
+      <div class="ticket-head">
+        <h2 id="leadHeadTitle">New enquiry</h2>
+        <span class="step-tag" id="leadIdPreview">ID assigned on save</span>
+      </div>
+      <div class="perf"><span class="notch left"></span><span class="notch right"></span></div>
+
+      <div class="tabs">
+        <div class="tab active" data-tab="new" onclick="setLeadTab('new')">New lead</div>
+        <div class="tab" data-tab="find" onclick="setLeadTab('find')">Find existing</div>
+      </div>
+
+      <div class="panel active" id="panel-new">
+        <form id="newLeadForm">
+          <div class="field">
+            <label for="company">Prospect / company name</label>
+            <input type="text" id="company" required placeholder="e.g. Rithika Constructions" autocomplete="organization">
+          </div>
+          <div class="row2">
+            <div class="field">
+              <label for="contactName">Contact person</label>
+              <input type="text" id="contactName" required placeholder="Full name" autocomplete="name">
+            </div>
+            <div class="field">
+              <label for="phone">Phone number</label>
+              <input type="tel" id="phone" required placeholder="10-digit mobile" inputmode="tel" autocomplete="tel">
+            </div>
+          </div>
+          <div class="field">
+            <label for="requirement">Requirement</label>
+            <select id="requirement" required>
+              <option value="" disabled selected>Select type</option>
+              <option>Corporate Event</option>
+              <option>Social Event / Wedding</option>
+              <option>Holiday / Trip</option>
+              <option>Artist Management</option>
+              <option>Corporate Gifting</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="row2">
+            <div class="field">
+              <label for="eventWindow">Tentative event date</label>
+              <input type="text" id="eventWindow" placeholder="e.g. Oct 2026">
+            </div>
+            <div class="field">
+              <label for="budget">Budget range</label>
+              <input type="text" id="budget" placeholder="e.g. ₹5–8L" inputmode="decimal">
+            </div>
+          </div>
+          <div class="field">
+            <label for="source">Source</label>
+            <select id="source">
+              <option value="" disabled selected>How did this lead come in?</option>
+              <option>Outbound calling</option>
+              <option>Physical visit</option>
+              <option>Social media</option>
+              <option>Partner referral</option>
+              <option>Employee referral</option>
+              <option>Inbound call</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="notes">Notes (optional)</label>
+            <textarea id="notes" placeholder="Anything Backend should know before costing"></textarea>
+          </div>
+          <div class="status-msg" id="leadStatusMsg"></div>
+          <div class="privacy-note">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2L4 5v6c0 5.5 3.8 9.7 8 11 4.2-1.3 8-5.5 8-11V5l-8-3z" stroke="#0F6E56" stroke-width="1.6"/></svg>
+            <span>The phone number goes straight into the restricted contacts sheet — Backend, Operation, Creative and Account never see it. They'll only ever see this lead's ID.</span>
+          </div>
+        </form>
+
+        <div class="success" id="successPanel-lead">
+          <div class="badge"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#0F6E56" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h3>Lead saved</h3>
+          <div class="id-chip" id="newIdChip">SAGA-L-000</div>
+          <p>Give this ID to Backend along with anything discussed on the call.</p>
+          <button type="button" onclick="resetLeadForm()">Log another lead</button>
+        </div>
+      </div>
+
+      <div class="panel" id="panel-find">
+        <div class="search-box">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="#5B665F" stroke-width="2"/><path d="M21 21l-4.3-4.3" stroke="#5B665F" stroke-width="2" stroke-linecap="round"/></svg>
+          <input type="text" id="leadSearchInput" placeholder="Search by company name or Lead ID">
+        </div>
+        <div class="result-list" id="leadResultList"><div class="empty-state">Start typing to search existing leads</div></div>
+      </div>
+    </div>
+
+    <div id="mode-deal" style="display:none;">
+      <div class="ticket-head">
+        <h2 id="dealHeadTitle">Find the lead to close</h2>
+        <span class="step-tag">Step 6</span>
+      </div>
+      <div class="perf"><span class="notch left"></span><span class="notch right"></span></div>
+
+      <div class="body-pad">
+        <div id="dealSearchStage">
+          <div class="search-box">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="#5B665F" stroke-width="2"/><path d="M21 21l-4.3-4.3" stroke="#5B665F" stroke-width="2" stroke-linecap="round"/></svg>
+            <input type="text" id="dealSearchInput" placeholder="Search by company name or Lead ID">
+          </div>
+          <div class="result-list" id="dealResultList"><div class="empty-state">Start typing to find the lead you're closing</div></div>
+        </div>
+
+        <div id="closureStage" style="display:none;">
+          <div class="selected-chip">
+            <div class="info">
+              <div class="rid" id="selRid">SAGA-L-0000</div>
+              <div class="rname" id="selRname">Company name</div>
+            </div>
+            <button type="button" onclick="backToDealSearch()">Change</button>
+          </div>
+
+          <form id="closeForm">
+            <div class="row2">
+              <div class="field">
+                <label for="finalAmount">Final agreed amount (₹)</label>
+                <input type="number" id="finalAmount" required placeholder="e.g. 500000" inputmode="numeric">
+              </div>
+              <div class="field">
+                <label for="advancePct">Advance %</label>
+                <input type="number" id="advancePct" placeholder="e.g. 40" inputmode="numeric">
+              </div>
+            </div>
+            <div class="field">
+              <label for="confirmDate">Confirmation date</label>
+              <input type="date" id="confirmDate" required>
+            </div>
+
+            <div class="field">
+              <label for="itemSearch">Item / service (optional — search your Zoho Books catalog)</label>
+              <div class="search-box" id="itemSearchBox" style="margin-bottom:8px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="#5B665F" stroke-width="2"/><path d="M21 21l-4.3-4.3" stroke="#5B665F" stroke-width="2" stroke-linecap="round"/></svg>
+                <input type="text" id="itemSearch" placeholder="Start typing an item name…">
+              </div>
+              <div class="result-list" id="itemResultList" style="display:none;"></div>
+              <div id="selectedItemChip" class="selected-chip" style="display:none; margin-bottom:0;">
+                <div class="info">
+                  <div class="rid" id="selItemHsn">HSN —</div>
+                  <div class="rname" id="selItemName">Item name</div>
+                </div>
+                <button type="button" onclick="clearItem()">Clear</button>
+              </div>
+              <div class="field-hint">Leave blank to use a generic "Event Services" line instead.</div>
+            </div>
+
+            <div class="row2">
+              <div class="field">
+                <label for="gstin">Client GSTIN (optional)</label>
+                <input type="text" id="gstin" placeholder="If registered">
+              </div>
+              <div class="field">
+                <label for="state">State (for GST)</label>
+                <input type="text" id="state" placeholder="e.g. Telangana">
+              </div>
+            </div>
+            <div class="field">
+              <label for="address">Billing address (optional)</label>
+              <textarea id="address" placeholder="For the Zoho Books invoice"></textarea>
+            </div>
+
+            <div class="status-msg" id="dealStatusMsg"></div>
+            <div class="zoho-note">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2L4 5v6c0 5.5 3.8 9.7 8 11 4.2-1.3 8-5.5 8-11V5l-8-3z" stroke="#0F6E56" stroke-width="1.6"/></svg>
+              <span>This creates a <strong>draft</strong> invoice only — nothing is sent to the client. Accounts should review GST/tax lines in Zoho Books before finalising.</span>
+            </div>
+          </form>
+        </div>
+
+        <div class="success" id="successPanel-deal">
+          <div class="badge"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#0F6E56" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h3>Deal closed</h3>
+          <div class="row"><span>Lead ID</span><span id="outLeadId">—</span></div>
+          <div class="row"><span>Status</span><span>Closed</span></div>
+          <div class="row"><span>Zoho Contact</span><span id="outContact">—</span></div>
+          <div class="row"><span>Draft Invoice</span><span id="outInvoice">—</span></div>
+          <div id="zohoWarning" class="zoho-warning" style="display:none;"></div>
+          <button type="button" onclick="location.reload()">Close another deal</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>team.saagaaevents.com · Exceptional Experience Everytime</footer>
+</div>
+
+<div class="action-bar" id="actionBar">
+  <div class="action-bar-inner">
+    <button type="submit" form="newLeadForm" class="submit-btn" id="actionBtn">Save lead &amp; generate ID</button>
+  </div>
+</div>
+
+<script>
+  const WEB_APP_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
+
+  let currentMode = 'lead';
+  let currentLeadTab = 'new';
+  let selectedLead = null;
+  let selectedItem = null;
+
+  function setMode(mode) {
+    currentMode = mode;
+    document.getElementById('mode-lead').style.display = mode === 'lead' ? 'block' : 'none';
+    document.getElementById('mode-deal').style.display = mode === 'deal' ? 'block' : 'none';
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+    updateActionBar();
+  }
+
+  function updateActionBar() {
+    const bar = document.getElementById('actionBar');
+    const btn = document.getElementById('actionBtn');
+    if (currentMode === 'lead') {
+      const successShown = document.getElementById('successPanel-lead').classList.contains('active');
+      bar.classList.toggle('show', currentLeadTab === 'new' && !successShown);
+      btn.setAttribute('form', 'newLeadForm');
+      btn.textContent = 'Save lead & generate ID';
+    } else {
+      const closureVisible = document.getElementById('closureStage').style.display !== 'none';
+      const successShown = document.getElementById('successPanel-deal').classList.contains('active');
+      bar.classList.toggle('show', closureVisible && !successShown);
+      btn.setAttribute('form', 'closeForm');
+      btn.textContent = 'Close deal & create draft invoice';
+    }
+  }
+
+  function setLeadTab(tab) {
+    currentLeadTab = tab;
+    document.querySelectorAll('#mode-lead .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+    document.getElementById('panel-new').classList.toggle('active', tab === 'new');
+    document.getElementById('panel-find').classList.toggle('active', tab === 'find');
+    document.getElementById('leadHeadTitle').textContent = tab === 'new' ? 'New enquiry' : 'Find a lead';
+    updateActionBar();
+  }
+
+  const newLeadForm = document.getElementById('newLeadForm');
+  const leadStatusMsg = document.getElementById('leadStatusMsg');
+
+  newLeadForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (WEB_APP_URL.includes("PASTE_YOUR")) {
+      leadStatusMsg.textContent = "Backend not connected — paste the Web App URL into WEB_APP_URL.";
+      leadStatusMsg.className = "status-msg error";
+      return;
+    }
+    const payload = {
+      action: "createLead",
+      company: document.getElementById('company').value,
+      contactName: document.getElementById('contactName').value,
+      phone: document.getElementById('phone').value,
+      requirement: document.getElementById('requirement').value,
+      eventWindow: document.getElementById('eventWindow').value,
+      budget: document.getElementById('budget').value,
+      source: document.getElementById('source').value,
+      notes: document.getElementById('notes').value,
+    };
+    const btn = document.getElementById('actionBtn');
+    btn.disabled = true;
+    leadStatusMsg.textContent = "Saving…";
+    leadStatusMsg.className = "status-msg loading";
+    try {
+      const res = await fetch(WEB_APP_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        document.getElementById('newIdChip').textContent = data.leadId;
+        newLeadForm.style.display = "none";
+        document.getElementById('successPanel-lead').classList.add('active');
+        leadStatusMsg.textContent = "";
+        updateActionBar();
+      } else {
+        throw new Error(data.error || "Unknown error");
+      }
+    } catch (err) {
+      leadStatusMsg.textContent = "Couldn't save — " + err.message;
+      leadStatusMsg.className = "status-msg error";
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  function resetLeadForm() {
+    newLeadForm.reset();
+    newLeadForm.style.display = "block";
+    document.getElementById('successPanel-lead').classList.remove('active');
+    updateActionBar();
+  }
+
+  const leadSearchInput = document.getElementById('leadSearchInput');
+  const leadResultList = document.getElementById('leadResultList');
+  let leadSearchTimer;
+
+  leadSearchInput.addEventListener('input', () => {
+    clearTimeout(leadSearchTimer);
+    const q = leadSearchInput.value.trim();
+    if (!q) { leadResultList.innerHTML = '<div class="empty-state">Start typing to search existing leads</div>'; return; }
+    leadSearchTimer = setTimeout(() => runLeadSearch(q), 300);
+  });
+
+  async function runLeadSearch(query) {
+    if (WEB_APP_URL.includes("PASTE_YOUR")) return;
+    leadResultList.innerHTML = '<div class="empty-state">Searching…</div>';
+    try {
+      const res = await fetch(`${WEB_APP_URL}?action=searchLeads&q=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      if (!data.ok || !data.results.length) {
+        leadResultList.innerHTML = '<div class="empty-state">No matching leads found</div>';
+        return;
+      }
+      leadResultList.innerHTML = data.results.map(r => `
+        <div class="result-card">
+          <div class="rid">${r.leadId}</div>
+          <div class="rname">${r.company}</div>
+          <div class="rmeta">${r.requirement || '—'} · ${r.status || 'Open'}</div>
+        </div>
+      `).join('');
+    } catch (err) {
+      leadResultList.innerHTML = '<div class="empty-state">Search failed — check connection</div>';
+    }
+  }
+
+  const dealSearchInput = document.getElementById('dealSearchInput');
+  const dealResultList = document.getElementById('dealResultList');
+  let dealSearchTimer;
+
+  dealSearchInput.addEventListener('input', () => {
+    clearTimeout(dealSearchTimer);
+    const q = dealSearchInput.value.trim();
+    if (!q) { dealResultList.innerHTML = '<div class="empty-state">Start typing to find the lead you\'re closing</div>'; return; }
+    dealSearchTimer = setTimeout(() => runDealSearch(q), 300);
+  });
+
+  async function runDealSearch(query) {
+    if (WEB_APP_URL.includes("PASTE_YOUR")) return;
+    dealResultList.innerHTML = '<div class="empty-state">Searching…</div>';
+    try {
+      const res = await fetch(`${WEB_APP_URL}?action=searchLeads&q=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      if (!data.ok || !data.results.length) {
+        dealResultList.innerHTML = '<div class="empty-state">No matching leads found</div>';
+        return;
+      }
+      dealResultList.innerHTML = data.results.map((r, i) => `
+        <div class="result-card" data-idx="${i}">
+          <div class="rid">${r.leadId}</div>
+          <div class="rname">${r.company}</div>
+          <div class="rmeta">${r.requirement || '—'} · ${r.status || 'Open'}</div>
+        </div>
+      `).join('');
+      window.__dealResults = data.results;
+      document.querySelectorAll('#dealResultList .result-card').forEach(card => {
+        card.addEventListener('click', () => selectLead(window.__dealResults[card.dataset.idx]));
+      });
+    } catch (err) {
+      dealResultList.innerHTML = '<div class="empty-state">Search failed — check connection</div>';
+    }
+  }
+
+  function selectLead(lead) {
+    selectedLead = lead;
+    document.getElementById('selRid').textContent = lead.leadId;
+    document.getElementById('selRname').textContent = lead.company;
+    document.getElementById('dealSearchStage').style.display = 'none';
+    document.getElementById('closureStage').style.display = 'block';
+    document.getElementById('dealHeadTitle').textContent = 'Confirm closure';
+    updateActionBar();
+  }
+
+  function backToDealSearch() {
+    selectedLead = null;
+    document.getElementById('dealSearchStage').style.display = 'block';
+    document.getElementById('closureStage').style.display = 'none';
+    document.getElementById('dealHeadTitle').textContent = 'Find the lead to close';
+    updateActionBar();
+  }
+
+  const itemSearchInput = document.getElementById('itemSearch');
+  const itemResultList = document.getElementById('itemResultList');
+  let itemSearchTimer;
+
+  itemSearchInput.addEventListener('input', () => {
+    clearTimeout(itemSearchTimer);
+    const q = itemSearchInput.value.trim();
+    if (!q) { itemResultList.style.display = 'none'; itemResultList.innerHTML = ''; return; }
+    itemSearchTimer = setTimeout(() => runItemSearch(q), 300);
+  });
+
+  async function runItemSearch(query) {
+    if (WEB_APP_URL.includes("PASTE_YOUR")) return;
+    itemResultList.style.display = 'flex';
+    itemResultList.innerHTML = '<div class="empty-state">Searching catalog…</div>';
+    try {
+      const res = await fetch(`${WEB_APP_URL}?action=searchItems&q=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      if (!data.ok || !data.results.length) {
+        itemResultList.innerHTML = '<div class="empty-state">No matching items — leave blank to use a generic line</div>';
+        return;
+      }
+      itemResultList.innerHTML = data.results.map((it, i) => `
+        <div class="result-card" data-idx="${i}">
+          <div class="rid">${it.hsn ? 'HSN ' + it.hsn : it.unit || ''}</div>
+          <div class="rname">${it.name}</div>
+          <div class="rmeta">${it.rate ? '₹' + it.rate : ''}</div>
+        </div>
+      `).join('');
+      window.__itemResults = data.results;
+      document.querySelectorAll('#itemResultList .result-card').forEach(card => {
+        card.addEventListener('click', () => selectItem(window.__itemResults[card.dataset.idx]));
+      });
+    } catch (err) {
+      itemResultList.innerHTML = '<div class="empty-state">Search failed — check connection</div>';
+    }
+  }
+
+  function selectItem(item) {
+    selectedItem = item;
+    document.getElementById('selItemHsn').textContent = item.hsn ? 'HSN ' + item.hsn : (item.unit || 'Item');
+    document.getElementById('selItemName').textContent = item.name;
+    document.getElementById('selectedItemChip').style.display = 'flex';
+    itemResultList.style.display = 'none';
+    itemResultList.innerHTML = '';
+    itemSearchInput.value = '';
+    document.getElementById('itemSearchBox').style.display = 'none';
+  }
+
+  function clearItem() {
+    selectedItem = null;
+    document.getElementById('selectedItemChip').style.display = 'none';
+    document.getElementById('itemSearchBox').style.display = 'block';
+    itemSearchInput.value = '';
+  }
+
+  const closeForm = document.getElementById('closeForm');
+  const dealStatusMsg = document.getElementById('dealStatusMsg');
+
+  closeForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!selectedLead) return;
+    const payload = {
+      action: "closeDeal",
+      leadId: selectedLead.leadId,
+      finalAmount: document.getElementById('finalAmount').value,
+      advancePct: document.getElementById('advancePct').value,
+      confirmDate: document.getElementById('confirmDate').value,
+      gstin: document.getElementById('gstin').value,
+      state: document.getElementById('state').value,
+      address: document.getElementById('address').value,
+      itemId: selectedItem ? selectedItem.itemId : "",
+      itemName: selectedItem ? selectedItem.name : "",
+    };
+    const btn = document.getElementById('actionBtn');
+    btn.disabled = true;
+    dealStatusMsg.textContent = "Closing deal & syncing to Zoho Books…";
+    dealStatusMsg.className = "status-msg loading";
+    try {
+      const res = await fetch(WEB_APP_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        document.getElementById('closureStage').style.display = 'none';
+        document.getElementById('successPanel-deal').classList.add('active');
+        document.getElementById('outLeadId').textContent = data.leadId;
+        document.getElementById('outContact').textContent = data.zoho && data.zoho.contactId ? "Created ✓" : "Not synced";
+        document.getElementById('outInvoice').textContent = data.zoho && data.zoho.invoiceNumber ? data.zoho.invoiceNumber : "Not created";
+        if (!data.zoho || !data.zoho.ok) {
+          const warn = document.getElementById('zohoWarning');
+          warn.style.display = 'block';
+          warn.textContent = "Deal closed and saved, but Zoho Books sync didn't complete (" + (data.zoho && data.zoho.error ? data.zoho.error : "unknown error") + "). Create the contact/invoice manually and flag this to Sanjeev.";
+        }
+        updateActionBar();
+      } else {
+        throw new Error(data.error || "Unknown error");
+      }
+    } catch (err) {
+      dealStatusMsg.textContent = "Couldn't close deal — " + err.message;
+      dealStatusMsg.className = "status-msg error";
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  updateActionBar();
+</script>
+</body>
+</html>

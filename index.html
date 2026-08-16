@@ -122,8 +122,10 @@
   .slot-banner .slot-sub{ font-size:11px; color:var(--teal-100); margin-top:2px; }
   .slot-banner.optional{ background:var(--teal-50); color:var(--teal-900); border:1px solid var(--teal-100); }
   .slot-banner.optional .slot-sub{ color:var(--ink-soft); }
-  #nightOptInToggle:checked ~ #nightToggleTrack{ background:var(--teal-600); }
-  #nightOptInToggle:checked ~ #nightToggleDot{ transform:translateX(20px); }
+  .toggle-track{ background:#C9C2BC; }
+  .toggle-dot{ background:#fff; }
+  #nightOptInToggle:checked ~ .toggle-track{ background:var(--teal-600); }
+  #nightOptInToggle:checked ~ .toggle-dot{ transform:translateX(20px); }
 
   .loc-note{ display:flex; gap:8px; align-items:flex-start; background:var(--teal-50); border:1px solid var(--teal-100); border-radius:10px; padding:10px 12px; margin-top:14px; font-size:11.5px; color:var(--teal-900); line-height:1.5; }
   .loc-status{ font-size:11px; margin-top:6px; font-weight:600; }
@@ -258,8 +260,8 @@
             </div>
             <label style="position:relative; display:inline-block; width:46px; height:26px; flex:none;">
               <input type="checkbox" id="nightOptInToggle" style="opacity:0; width:0; height:0;" onchange="toggleNightOptIn()">
-              <span id="nightToggleTrack" style="position:absolute; inset:0; background:#C9C2BC; border-radius:999px; transition:.15s;"></span>
-              <span id="nightToggleDot" style="position:absolute; left:3px; top:3px; width:20px; height:20px; background:#fff; border-radius:50%; transition:.15s;"></span>
+              <span id="nightToggleTrack" class="toggle-track" style="position:absolute; inset:0; border-radius:999px; transition:.15s;"></span>
+              <span id="nightToggleDot" class="toggle-dot" style="position:absolute; left:3px; top:3px; width:20px; height:20px; border-radius:50%; transition:.15s;"></span>
             </label>
           </div>
         </div>

@@ -58,6 +58,14 @@
   }
   input:focus, select:focus, textarea:focus{ outline:none; border-color:var(--teal-600); background:#fff; }
   textarea{resize:vertical; min-height:64px;}
+
+  .multi-row{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .multi-row input{ flex:1; }
+  .multi-row .remove-row{ flex:none; width:36px; height:36px; border-radius:8px; border:1.5px solid var(--line); background:var(--cream); color:var(--olive-700); font-size:18px; line-height:1; cursor:pointer; }
+  .add-row-btn{ background:none; border:1.5px dashed var(--teal-600); color:var(--teal-700); border-radius:9px; padding:10px; width:100%; font-family:'Space Grotesk',sans-serif; font-size:12.5px; font-weight:600; cursor:pointer; min-height:40px; }
+  .range-item{ border:1.5px solid var(--line); border-radius:10px; padding:12px; margin-bottom:8px; }
+  .range-item .mini-label{ font-size:10.5px; color:var(--ink-soft); margin-bottom:4px; display:block; }
+  .remove-link{ background:none; border:none; color:var(--olive-700); font-size:12px; font-weight:600; cursor:pointer; padding:6px 0 0; }
   .row2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   @media (max-width:380px){ .row2{ grid-template-columns:1fr; } }
 
@@ -428,9 +436,32 @@
                 <option>Artist Management</option><option>Corporate Gifting</option><option>Other</option>
               </select>
             </div>
-            <div class="row2">
-              <div class="field"><label for="eventWindow">Tentative event date</label><input type="text" id="eventWindow"></div>
-              <div class="field"><label for="budget">Budget range</label><input type="text" id="budget"></div>
+            <div class="field">
+              <label for="dateType">Event date</label>
+              <select id="dateType" onchange="renderDateInputs()">
+                <option value="tentative">Tentative date — approximate, not confirmed</option>
+                <option value="fixed">Fixed date — confirmed</option>
+                <option value="multiple_fixed">Multiple fixed dates — client choosing one</option>
+                <option value="range">Multi-day event — start &amp; end date</option>
+                <option value="multiple_range">Multiple multi-day options — client choosing one</option>
+              </select>
+              <div id="dateInputsContainer" style="margin-top:10px;"></div>
+            </div>
+            <div class="field">
+              <label>Budget</label>
+              <div class="row2">
+                <select id="budgetBasis">
+                  <option>Overall</option>
+                  <option>Per person</option>
+                  <option>Per room</option>
+                  <option>Per event</option>
+                </select>
+                <select id="budgetType" onchange="renderBudgetInputs()">
+                  <option value="fixed">Fixed amount</option>
+                  <option value="range">Range</option>
+                </select>
+              </div>
+              <div id="budgetInputsContainer" style="margin-top:10px;"></div>
             </div>
             <div class="field">
               <label for="source">Source</label>
@@ -1197,6 +1228,121 @@
   }
 
   // ---- New Lead ----
+  // ---- Event date: calendar-based inputs, several structures, serialized to one readable string ----
+
+  function formatDateNice(dateStr) {
+    if (!dateStr) return '';
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const [y, m, d] = dateStr.split('-').map(Number);
+    if (!y || !m || !d) return dateStr;
+    return `${d} ${months[m - 1]} ${y}`;
+  }
+
+  function renderDateInputs() {
+    const type = document.getElementById('dateType').value;
+    const c = document.getElementById('dateInputsContainer');
+    if (type === 'tentative' || type === 'fixed') {
+      c.innerHTML = `<input type="date" id="dateSingle">`;
+    } else if (type === 'multiple_fixed') {
+      c.innerHTML = `<div id="multiDateRows"></div><button type="button" class="add-row-btn" onclick="addDateRow()">+ Add another date</button>`;
+      addDateRow();
+    } else if (type === 'range') {
+      c.innerHTML = `
+        <div class="row2">
+          <div><span class="mini-label">Start date</span><input type="date" id="rangeStart"></div>
+          <div><span class="mini-label">End date</span><input type="date" id="rangeEnd"></div>
+        </div>`;
+    } else if (type === 'multiple_range') {
+      c.innerHTML = `<div id="multiRangeRows"></div><button type="button" class="add-row-btn" onclick="addRangeRow()">+ Add another date range</button>`;
+      addRangeRow();
+    }
+  }
+
+  function addDateRow() {
+    const row = document.createElement('div');
+    row.className = 'multi-row';
+    row.innerHTML = `<input type="date"><button type="button" class="remove-row" onclick="this.parentElement.remove()">&times;</button>`;
+    document.getElementById('multiDateRows').appendChild(row);
+  }
+
+  function addRangeRow() {
+    const row = document.createElement('div');
+    row.className = 'range-item';
+    row.innerHTML = `
+      <div class="row2" style="margin-bottom:0;">
+        <div><span class="mini-label">Start date</span><input type="date"></div>
+        <div><span class="mini-label">End date</span><input type="date"></div>
+      </div>
+      <button type="button" class="remove-link" onclick="this.parentElement.remove()">Remove this option</button>`;
+    document.getElementById('multiRangeRows').appendChild(row);
+  }
+
+  function serializeEventWindow() {
+    const type = document.getElementById('dateType').value;
+    if (type === 'tentative') {
+      const v = document.getElementById('dateSingle').value;
+      return v ? `Tentative: ${formatDateNice(v)}` : '';
+    }
+    if (type === 'fixed') {
+      const v = document.getElementById('dateSingle').value;
+      return v ? formatDateNice(v) : '';
+    }
+    if (type === 'multiple_fixed') {
+      const dates = Array.from(document.querySelectorAll('#multiDateRows input[type=date]'))
+        .map(i => i.value).filter(Boolean).map(formatDateNice);
+      return dates.length ? dates.join(', ') + ' (client choosing one)' : '';
+    }
+    if (type === 'range') {
+      const start = document.getElementById('rangeStart').value;
+      const end = document.getElementById('rangeEnd').value;
+      if (!start && !end) return '';
+      return `${formatDateNice(start)} – ${formatDateNice(end)}`;
+    }
+    if (type === 'multiple_range') {
+      const rows = Array.from(document.querySelectorAll('#multiRangeRows .range-item'));
+      const ranges = rows.map(r => {
+        const inputs = r.querySelectorAll('input[type=date]');
+        const s = inputs[0].value, e = inputs[1].value;
+        return (s || e) ? `${formatDateNice(s)}–${formatDateNice(e)}` : '';
+      }).filter(Boolean);
+      return ranges.length ? ranges.join(' or ') + ' (client choosing one)' : '';
+    }
+    return '';
+  }
+
+  // ---- Budget: basis + fixed amount or range, serialized to one readable string ----
+
+  function renderBudgetInputs() {
+    const type = document.getElementById('budgetType').value;
+    const c = document.getElementById('budgetInputsContainer');
+    if (type === 'fixed') {
+      c.innerHTML = `<input type="number" id="budgetAmount" inputmode="numeric" placeholder="e.g. 500000">`;
+    } else {
+      c.innerHTML = `
+        <div class="range-row">
+          <input type="number" id="budgetMin" inputmode="numeric" placeholder="Min">
+          <span class="to-label">to</span>
+          <input type="number" id="budgetMax" inputmode="numeric" placeholder="Max">
+        </div>`;
+    }
+  }
+
+  function serializeBudget() {
+    const basis = document.getElementById('budgetBasis').value;
+    const type = document.getElementById('budgetType').value;
+    if (type === 'fixed') {
+      const amt = document.getElementById('budgetAmount').value;
+      return amt ? `₹${Number(amt).toLocaleString('en-IN')} (${basis})` : '';
+    }
+    const min = document.getElementById('budgetMin').value;
+    const max = document.getElementById('budgetMax').value;
+    if (!min && !max) return '';
+    return `₹${Number(min || 0).toLocaleString('en-IN')}–₹${Number(max || 0).toLocaleString('en-IN')} (${basis})`;
+  }
+
+  renderDateInputs();
+  renderBudgetInputs();
+
   document.getElementById('newLeadForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const statusMsg = document.getElementById('newLeadStatusMsg');
@@ -1210,8 +1356,8 @@
           contactName: document.getElementById('contactName').value,
           phone: document.getElementById('phone').value,
           requirement: document.getElementById('requirement').value,
-          eventWindow: document.getElementById('eventWindow').value,
-          budget: document.getElementById('budget').value,
+          eventWindow: serializeEventWindow(),
+          budget: serializeBudget(),
           source: document.getElementById('source').value,
           notes: document.getElementById('notes').value,
         }),
@@ -1220,6 +1366,10 @@
       if (data.ok) {
         statusMsg.textContent = "Saved — Lead ID " + data.leadId; statusMsg.className = "status-msg ok";
         document.getElementById('newLeadForm').reset();
+        document.getElementById('dateType').value = 'tentative';
+        document.getElementById('budgetType').value = 'fixed';
+        renderDateInputs();
+        renderBudgetInputs();
       } else { statusMsg.textContent = data.error || "Couldn't save."; statusMsg.className = "status-msg error"; }
     } catch (err) { statusMsg.textContent = "Couldn't save — " + err.message; statusMsg.className = "status-msg error"; }
   });

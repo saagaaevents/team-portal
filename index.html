@@ -66,6 +66,18 @@
   .range-item{ border:1.5px solid var(--line); border-radius:10px; padding:12px; margin-bottom:8px; }
   .range-item .mini-label{ font-size:10.5px; color:var(--ink-soft); margin-bottom:4px; display:block; }
   .remove-link{ background:none; border:none; color:var(--olive-700); font-size:12px; font-weight:600; cursor:pointer; padding:6px 0 0; }
+
+  .report-table-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; margin-bottom:8px; border:1px solid var(--line); border-radius:10px; }
+  .report-table{ border-collapse:collapse; width:100%; font-size:12px; white-space:nowrap; }
+  .report-table th{ background:var(--teal-900); color:#fff; padding:8px 10px; text-align:left; font-weight:600; position:sticky; top:0; }
+  .report-table td{ padding:8px 10px; border-bottom:1px solid var(--line); }
+  .report-table td.center, .report-table th.center{ text-align:center; }
+  .report-table tr:last-child td{ border-bottom:none; }
+  .report-badge{ display:inline-block; padding:2px 8px; border-radius:4px; font-weight:600; font-size:11.5px; min-width:18px; }
+  .report-badge.good{ background:var(--teal-100); color:var(--teal-900); }
+  .report-badge.low{ background:var(--olive-100); color:var(--olive-700); }
+  .report-badge.zero{ background:var(--olive-600); color:#fff; }
+  .report-badge.off{ background:var(--navy-100); color:var(--navy-700); }
   .row2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   @media (max-width:380px){ .row2{ grid-template-columns:1fr; } }
 
@@ -248,11 +260,25 @@
       <div class="mode-btn" data-mode="ops" id="opsTabBtn" style="display:none;" onclick="setMode('ops')">Operations</div>
       <div class="mode-btn" data-mode="accounts" id="accountsTabBtn" style="display:none;" onclick="setMode('accounts')">Accounts</div>
       <div class="mode-btn" data-mode="dashboard" id="dashboardTabBtn" style="display:none;" onclick="setMode('dashboard')">Dashboard</div>
+      <div class="mode-btn" data-mode="reports" id="reportsTabBtn" style="display:none;" onclick="setMode('reports')">Reports</div>
       <div class="mode-btn" data-mode="admin" id="adminTabBtn" style="display:none;" onclick="setMode('admin')">Admin</div>
     </div>
 
     <!-- ---- MY UPDATE (Daily Activity / Optional / Advisor) ---- -->
     <div id="mode-activity">
+
+      <!-- Sales GP standing — independent of activity-form type, so it shows
+           for everyone including optional reporters like Pradip -->
+      <div class="ticket" id="mySalesCard" style="margin-bottom:14px; display:none;">
+        <div class="body-pad" style="padding:14px 16px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:2px;">
+            <div style="font-size:13px; font-weight:600; color:var(--teal-900);">My sales standing</div>
+            <span style="font-size:10px; font-weight:600; color:var(--olive-700); background:var(--olive-100); padding:2px 7px; border-radius:4px;">DRAFT</span>
+          </div>
+          <div class="field-hint" style="margin-bottom:10px;">Based on your approved sales entries only.</div>
+          <div id="mySalesCardBody"></div>
+        </div>
+      </div>
 
       <!-- Regular / manager: slot-locked -->
       <div id="regularActivityBlock">
@@ -271,6 +297,25 @@
               <span id="nightToggleTrack" class="toggle-track" style="position:absolute; inset:0; border-radius:999px; transition:.15s;"></span>
               <span id="nightToggleDot" class="toggle-dot" style="position:absolute; left:3px; top:3px; width:20px; height:20px; border-radius:50%; transition:.15s;"></span>
             </label>
+          </div>
+        </div>
+        <div class="ticket" id="myPayCard" style="margin-bottom:14px; display:none;">
+          <div class="body-pad" style="padding:14px 16px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:2px;">
+              <div style="font-size:13px; font-weight:600; color:var(--teal-900);">My activity-based pay</div>
+              <span style="font-size:10px; font-weight:600; color:var(--olive-700); background:var(--olive-100); padding:2px 7px; border-radius:4px;">DRAFT</span>
+            </div>
+            <div class="field-hint" style="margin-bottom:10px;">Not yet confirmed policy — for your own tracking. 3 entries/day = full day's pay.</div>
+            <div class="row2">
+              <div>
+                <div style="font-size:20px; font-weight:700; color:var(--teal-900);" id="myPayTodayAmount">—</div>
+                <div class="field-hint">Today (<span id="myPayTodayEntries">0</span> entries, <span id="myPayTodayPercent">0</span>%)</div>
+              </div>
+              <div>
+                <div style="font-size:20px; font-weight:700; color:var(--teal-900);" id="myPayMonthAmount">—</div>
+                <div class="field-hint">This month so far</div>
+              </div>
+            </div>
           </div>
         </div>
         <div class="ticket">
@@ -415,6 +460,7 @@
         <div class="tab active" data-salestab="new" onclick="setSalesTab('new')">New lead</div>
         <div class="tab" data-salestab="quote" onclick="setSalesTab('quote')">Quotation</div>
         <div class="tab" data-salestab="close" onclick="setSalesTab('close')">Close deal</div>
+        <div class="tab" data-salestab="gp" onclick="setSalesTab('gp')">Log sale (GP)</div>
       </div>
 
       <!-- New Lead -->
@@ -545,6 +591,31 @@
             <div id="zohoWarning" class="zoho-warning" style="display:none;"></div>
             <button type="button" onclick="location.reload()">Close another deal</button>
           </div>
+        </div>
+      </div>
+
+      <!-- Log Sale (GP) -->
+      <div id="salesPanel-gp" class="ticket" style="display:none;">
+        <div class="ticket-head"><h2>Log a sale</h2><span class="step-tag">Needs approval</span></div>
+        <div class="perf"><span class="notch left"></span><span class="notch right"></span></div>
+        <div class="body-pad">
+          <div class="zoho-note" style="margin-bottom:14px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2L4 5v6c0 5.5 3.8 9.7 8 11 4.2-1.3 8-5.5 8-11V5l-8-3z" stroke="#00A189" stroke-width="1.6"/></svg>
+            <span>Separate from the deal pipeline — this is purely for GP tracking against your salary target. Nothing counts until Admin approves it.</span>
+          </div>
+          <form id="gpEntryForm">
+            <div class="field"><label for="gpClientName">Client name</label><input type="text" id="gpClientName" required></div>
+            <div class="row2">
+              <div class="field"><label for="gpInvoiceValue">Total invoice value (₹)</label><input type="number" id="gpInvoiceValue" required inputmode="numeric"></div>
+              <div class="field"><label for="gpPaymentReceived">Payment received (₹)</label><input type="number" id="gpPaymentReceived" inputmode="numeric"></div>
+            </div>
+            <p class="field-hint" id="gpSuggestedHint">Suggested GP (10% of invoice) will show here as you type.</p>
+            <button type="submit" class="submit-btn" style="margin-top:6px;">Submit for approval</button>
+            <div class="status-msg" id="gpEntryStatusMsg"></div>
+          </form>
+
+          <h3 class="section-h">My submitted sales</h3>
+          <div id="myGpEntriesList"><div class="empty-state">Loading…</div></div>
         </div>
       </div>
     </div>
@@ -711,6 +782,62 @@
       <div id="incentiveList"><div class="empty-state">Loading…</div></div>
     </div>
 
+    <!-- ---- REPORTS ---- -->
+    <div id="mode-reports" style="display:none;">
+      <div class="tabs" style="padding:0; margin-bottom:12px;">
+        <div class="tab active" data-reportperiod="daily" onclick="setReportPeriod('daily')">Day</div>
+        <div class="tab" data-reportperiod="weekly" onclick="setReportPeriod('weekly')">Week</div>
+        <div class="tab" data-reportperiod="monthly" onclick="setReportPeriod('monthly')">Month</div>
+        <div class="tab" data-reportperiod="quarterly" onclick="setReportPeriod('quarterly')">Quarter</div>
+        <div class="tab" data-reportperiod="yearly" onclick="setReportPeriod('yearly')">Year</div>
+      </div>
+      <div class="status-msg" id="reportStatusMsg"></div>
+
+      <div id="reportContent" style="display:none;">
+        <h2 id="reportPeriodLabel" style="font-family:'Space Grotesk',sans-serif; color:var(--teal-900); font-size:17px; margin-bottom:12px;"></h2>
+
+        <div class="summary-row">
+          <div class="summary-card"><div class="num" id="reportTotalEntries">—</div><div class="lbl">Entries logged</div></div>
+          <div class="summary-card"><div class="num" id="reportComplianceRate">—</div><div class="lbl">Compliance rate</div></div>
+        </div>
+        <div class="summary-row">
+          <div class="summary-card"><div class="num" id="reportRosterGapsCount">—</div><div class="lbl">Zero-entry employees</div></div>
+          <div class="summary-card"><div class="num" id="reportQualityFlagsCount">—</div><div class="lbl">Quality flags</div></div>
+        </div>
+        <p class="field-hint" id="reportTopContributor" style="margin:10px 0 4px;"></p>
+        <p class="field-hint" id="reportAllowanceNote" style="display:none; margin:0 0 16px;"></p>
+
+        <div id="reportNarrativeWrap" style="display:none;" class="ticket">
+          <div class="body-pad" id="reportNarrativeBody" style="font-size:13px; line-height:1.65;"></div>
+        </div>
+
+        <h3 class="section-h">Who logged, who didn't</h3>
+        <div class="report-table-wrap"><table class="report-table" id="whoLoggedTable"></table></div>
+
+        <h3 class="section-h">Department engagement — is the tool being used at all?</h3>
+        <div class="report-table-wrap"><table class="report-table" id="deptEngagementTable"></table></div>
+        <p class="field-hint" id="reportZeroEngagementNote" style="margin:0 0 4px;"></p>
+
+        <h3 class="section-h">Department compliance <span style="font-weight:400; color:var(--ink-soft);">(among those who've engaged)</span></h3>
+        <div class="report-table-wrap"><table class="report-table" id="deptComplianceTable"></table></div>
+
+        <div id="reportRosterGapsSection" style="display:none;">
+          <h3 class="section-h" style="color:var(--olive-700);">Roster gaps by department — active employees with zero entries</h3>
+          <div id="reportRosterGapsList"></div>
+        </div>
+
+        <div id="reportQualitySection" style="display:none;">
+          <h3 class="section-h" style="color:var(--olive-700);">Log quality notes</h3>
+          <div id="reportQualityList"></div>
+        </div>
+
+        <div id="reportBlockersSection" style="display:none;">
+          <h3 class="section-h">Open items &amp; blockers mentioned this period</h3>
+          <div class="report-table-wrap"><table class="report-table" id="blockersTable"></table></div>
+        </div>
+      </div>
+    </div>
+
     <!-- ---- ADMIN ---- -->
     <div id="mode-admin" style="display:none;">
       <div class="ticket">
@@ -729,6 +856,26 @@
           <p class="field-hint" style="margin-bottom:14px;">Weekly lead target and monthly revenue target per salesperson — feeds the Dashboard.</p>
           <div id="adminTargetsList"><div class="empty-state">Loading…</div></div>
           <div class="status-msg" id="targetsStatusMsg"></div>
+        </div>
+      </div>
+      <div class="ticket">
+        <div class="ticket-head"><h2>Sales GP approvals</h2></div>
+        <div class="perf"><span class="notch left"></span><span class="notch right"></span></div>
+        <div class="body-pad">
+          <p class="field-hint" style="margin-bottom:14px;">Approve, reject, or edit sales entries — nothing counts toward salary/incentive tracking until approved here. Any of the 3 partners can review or edit.</p>
+          <div id="gpApprovalsList"><div class="empty-state">Loading…</div></div>
+          <div class="status-msg" id="gpApprovalsStatusMsg"></div>
+        </div>
+      </div>
+      <div class="ticket">
+        <div class="ticket-head"><h2>Salary &amp; incentive review</h2></div>
+        <div class="perf"><span class="notch left"></span><span class="notch right"></span></div>
+        <div class="body-pad">
+          <div class="zoho-note" style="margin-bottom:14px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2L4 5v6c0 5.5 3.8 9.7 8 11 4.2-1.3 8-5.5 8-11V5l-8-3z" stroke="#00A189" stroke-width="1.6"/></svg>
+            <span>Draft formula — needs your sign-off before acting on it. Based on <strong>approved</strong> Sales GP entries only.</span>
+          </div>
+          <div id="salaryReviewList"><div class="empty-state">Loading…</div></div>
         </div>
       </div>
     </div>
@@ -852,6 +999,7 @@
     document.getElementById('opsTabBtn').style.display = (dept.indexOf('operations') !== -1 || session.isAdmin) ? 'flex' : 'none';
     document.getElementById('accountsTabBtn').style.display = (dept.indexOf('account') !== -1 || session.isAdmin) ? 'flex' : 'none';
     document.getElementById('dashboardTabBtn').style.display = session.isAdmin ? 'flex' : 'none';
+    document.getElementById('reportsTabBtn').style.display = session.isAdmin ? 'flex' : 'none';
     document.getElementById('todayDate').textContent = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
     // Show the right "My update" block for this role
@@ -864,6 +1012,7 @@
       document.getElementById('nightOptInToggle').checked = session.nightOptIn;
       loadCurrentSlot();
       requestLocation();
+      loadMyActivityPay();
     } else if (session.isOptionalReporter) {
       fillDeptSelect(document.getElementById('optDept'), session.department);
       document.getElementById('optDate').value = todayISO();
@@ -871,6 +1020,7 @@
       document.getElementById('advDate').value = todayISO();
       loadAdvisorTotal();
     }
+    loadMySalesStanding(); // independent of activity-form type — shows for optional reporters (Pradip) too
 
     setMode('activity');
   }
@@ -914,6 +1064,55 @@
     );
   }
 
+  async function loadMyActivityPay() {
+    const card = document.getElementById('myPayCard');
+    try {
+      const res = await fetch(`${WEB_APP_URL}?action=getMyActivityPay&code=${encodeURIComponent(session.code)}&pin=${encodeURIComponent(session.pin)}`);
+      const data = await res.json();
+      if (!data.ok || !data.hasSalary) { card.style.display = 'none'; return; }
+      card.style.display = 'block';
+      document.getElementById('myPayTodayAmount').textContent = '₹' + Number(data.todayAmount).toLocaleString('en-IN');
+      document.getElementById('myPayTodayEntries').textContent = data.todayEntryCount;
+      document.getElementById('myPayTodayPercent').textContent = data.todayPercent;
+      document.getElementById('myPayMonthAmount').textContent = '₹' + Number(data.monthToDateAmount).toLocaleString('en-IN');
+    } catch (err) {
+      card.style.display = 'none'; // fail quietly — this is a nice-to-have, not core functionality
+    }
+  }
+
+  async function loadMySalesStanding() {
+    const card = document.getElementById('mySalesCard');
+    try {
+      const res = await fetch(`${WEB_APP_URL}?action=getMySalaryRecommendation&code=${encodeURIComponent(session.code)}&pin=${encodeURIComponent(session.pin)}`);
+      const data = await res.json();
+      if (!data.ok || !data.applicable) { card.style.display = 'none'; return; }
+      card.style.display = 'block';
+      const r = data.result;
+      let flag = '';
+      if (r.belowFloor) {
+        flag = `<div class="field-hint" style="color:var(--olive-700); font-weight:600;">Below floor this quarter — suggested next month's salary: ₹${Number(r.suggestedNextMonthlySalary).toLocaleString('en-IN')}</div>`;
+      }
+      if (r.incentiveEligible) {
+        flag += `<div class="field-hint" style="color:var(--teal-700); font-weight:600;">Incentive eligible (${r.lastFYLabel}) — suggested ₹${Number(r.incentiveAmount).toLocaleString('en-IN')}</div>`;
+      }
+      document.getElementById('mySalesCardBody').innerHTML = `
+        <div class="row2">
+          <div>
+            <div style="font-size:18px; font-weight:700; color:var(--teal-900);">₹${Number(r.lastQuarterGp).toLocaleString('en-IN')}</div>
+            <div class="field-hint">${r.lastQuarterLabel} GP (floor ₹${Number(r.quarterlyFloor).toLocaleString('en-IN')})</div>
+          </div>
+          <div>
+            <div style="font-size:18px; font-weight:700; color:var(--teal-900);">₹${Number(r.lastFYGp).toLocaleString('en-IN')}</div>
+            <div class="field-hint">${r.lastFYLabel} GP</div>
+          </div>
+        </div>
+        ${flag || '<div class="field-hint">On track — no flags this period</div>'}
+      `;
+    } catch (err) {
+      card.style.display = 'none';
+    }
+  }
+
   async function toggleNightOptIn() {
     const checkbox = document.getElementById('nightOptInToggle');
     const desired = checkbox.checked;
@@ -938,7 +1137,7 @@
   // ---- Mode switching ----
   function setMode(mode) {
     currentMode = mode;
-    ['activity', 'team', 'summary', 'sales', 'ops', 'accounts', 'dashboard', 'admin'].forEach(m => {
+    ['activity', 'team', 'summary', 'sales', 'ops', 'accounts', 'dashboard', 'reports', 'admin'].forEach(m => {
       document.getElementById('mode-' + m).style.display = (m === mode) ? 'block' : 'none';
     });
     document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
@@ -960,8 +1159,9 @@
 
     if (mode === 'summary') loadSummary();
     if (mode === 'team') loadTeam();
-    if (mode === 'admin') { loadAdmin(); loadAdminTargets(); }
+    if (mode === 'admin') { loadAdmin(); loadAdminTargets(); loadGpApprovals(); loadSalaryReview(); }
     if (mode === 'dashboard') loadDashboard();
+    if (mode === 'reports') loadActivityReport(currentReportPeriod);
   }
 
   // ---- Regular daily activity submit ----
@@ -989,6 +1189,7 @@
         statusMsg.textContent = "Saved for " + data.slot + " — thanks!"; statusMsg.className = "status-msg ok";
         activityForm.reset(); fillDeptSelect(document.getElementById('entryDept'), session.department);
         loadCurrentSlot();
+        loadMyActivityPay();
       } else {
         statusMsg.textContent = data.error || "Couldn't save."; statusMsg.className = "status-msg error";
       }
@@ -1221,10 +1422,11 @@
   // =======================================================================
 
   function setSalesTab(tab) {
-    ['new', 'quote', 'close'].forEach(t => {
+    ['new', 'quote', 'close', 'gp'].forEach(t => {
       document.getElementById('salesPanel-' + t).style.display = (t === tab) ? 'block' : 'none';
     });
     document.querySelectorAll('#mode-sales .tab').forEach(el => el.classList.toggle('active', el.dataset.salestab === tab));
+    if (tab === 'gp') loadMyGpEntries();
   }
 
   // ---- New Lead ----
@@ -1373,6 +1575,65 @@
       } else { statusMsg.textContent = data.error || "Couldn't save."; statusMsg.className = "status-msg error"; }
     } catch (err) { statusMsg.textContent = "Couldn't save — " + err.message; statusMsg.className = "status-msg error"; }
   });
+
+  // ---- Log Sale (GP) ----
+  const gpInvoiceInput = document.getElementById('gpInvoiceValue');
+  gpInvoiceInput.addEventListener('input', () => {
+    const val = Number(gpInvoiceInput.value) || 0;
+    const suggested = Math.round(val * 0.10); // 10% assumption — matches the Config Sheet default, Admin can override at approval
+    document.getElementById('gpSuggestedHint').textContent = val
+      ? `Suggested GP (10% of invoice): ₹${suggested.toLocaleString('en-IN')} — Admin can adjust this at approval.`
+      : 'Suggested GP (10% of invoice) will show here as you type.';
+  });
+
+  document.getElementById('gpEntryForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const statusMsg = document.getElementById('gpEntryStatusMsg');
+    statusMsg.textContent = "Submitting…"; statusMsg.className = "status-msg loading";
+    try {
+      const res = await fetch(WEB_APP_URL, {
+        method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          action: "submitSalesGpEntry", code: session.code, pin: session.pin,
+          clientName: document.getElementById('gpClientName').value,
+          invoiceValue: document.getElementById('gpInvoiceValue').value,
+          paymentReceived: document.getElementById('gpPaymentReceived').value,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        statusMsg.textContent = "Submitted for approval — " + data.entryId; statusMsg.className = "status-msg ok";
+        document.getElementById('gpEntryForm').reset();
+        document.getElementById('gpSuggestedHint').textContent = 'Suggested GP (10% of invoice) will show here as you type.';
+        loadMyGpEntries();
+      } else { statusMsg.textContent = data.error || "Couldn't submit."; statusMsg.className = "status-msg error"; }
+    } catch (err) { statusMsg.textContent = "Couldn't submit — " + err.message; statusMsg.className = "status-msg error"; }
+  });
+
+  async function loadMyGpEntries() {
+    const list = document.getElementById('myGpEntriesList');
+    list.innerHTML = '<div class="empty-state">Loading…</div>';
+    try {
+      const res = await fetch(`${WEB_APP_URL}?action=getMySalesGpEntries&code=${encodeURIComponent(session.code)}&pin=${encodeURIComponent(session.pin)}`);
+      const data = await res.json();
+      if (!data.ok) { list.innerHTML = `<div class="empty-state">${data.error || 'Could not load'}</div>`; return; }
+      if (!data.entries.length) { list.innerHTML = '<div class="empty-state">No sales logged yet</div>'; return; }
+      list.innerHTML = data.entries.map(en => {
+        const statusColor = en.status === 'Approved' ? 'var(--teal-700)' : (en.status === 'Rejected' ? 'var(--olive-700)' : 'var(--ink-soft)');
+        const gpLine = en.status === 'Approved'
+          ? `Approved GP: ₹${Number(en.approvedGp).toLocaleString('en-IN')}`
+          : `Suggested GP: ₹${Number(en.suggestedGp).toLocaleString('en-IN')}`;
+        return `<div class="entry-card">
+          <div class="ename">${en.clientName}</div>
+          <div class="edept">Invoice ₹${Number(en.invoiceValue).toLocaleString('en-IN')} · Received ₹${Number(en.paymentReceived || 0).toLocaleString('en-IN')}</div>
+          <div class="etext">${gpLine}</div>
+          <div class="etext" style="color:${statusColor}; font-weight:600;">${en.status}</div>
+        </div>`;
+      }).join('');
+    } catch (err) {
+      list.innerHTML = `<div class="empty-state">Couldn't load — ${err.message}</div>`;
+    }
+  }
 
   // ---- Quotation ----
   let selectedQuoteLead = null;
@@ -1780,6 +2041,139 @@
   // ADMIN: Sales targets
   // =======================================================================
 
+  // =======================================================================
+  // REPORTS — daily/weekly/monthly/quarterly/yearly, same data as the
+  // scheduled emails, rendered here in the app's own theme.
+  // =======================================================================
+
+  let currentReportPeriod = 'daily';
+
+  function setReportPeriod(period) {
+    currentReportPeriod = period;
+    document.querySelectorAll('#mode-reports .tab').forEach(el => el.classList.toggle('active', el.dataset.reportperiod === period));
+    loadActivityReport(period);
+  }
+
+  function reportBadge(count, singleDayBuckets, isWaived) {
+    if (isWaived) return `<span class="report-badge off">Off</span>`;
+    if (!singleDayBuckets) return String(count); // aggregated bucket: plain number, "compliant" is a per-day idea
+    if (count >= 3) return `<span class="report-badge good">${count}</span>`;
+    if (count >= 1) return `<span class="report-badge low">${count}</span>`;
+    return `<span class="report-badge zero">0</span>`;
+  }
+
+  async function loadActivityReport(period) {
+    const statusMsg = document.getElementById('reportStatusMsg');
+    const content = document.getElementById('reportContent');
+    statusMsg.textContent = "Loading…"; statusMsg.className = "status-msg loading";
+    content.style.display = 'none';
+
+    try {
+      const res = await fetch(`${WEB_APP_URL}?action=getActivityReport&code=${encodeURIComponent(session.code)}&pin=${encodeURIComponent(session.pin)}&period=${period}`);
+      const data = await res.json();
+      if (!data.ok) { statusMsg.textContent = data.error || "Couldn't load report."; statusMsg.className = "status-msg error"; return; }
+      statusMsg.textContent = ""; content.style.display = 'block';
+
+      document.getElementById('reportPeriodLabel').textContent = data.periodLabel;
+      document.getElementById('reportTotalEntries').textContent = data.totalEntries;
+      document.getElementById('reportComplianceRate').textContent = data.complianceRate + '%';
+      const totalRosterGaps = Object.values(data.rosterGapsByDept || {}).reduce((sum, names) => sum + names.length, 0);
+      document.getElementById('reportRosterGapsCount').textContent = totalRosterGaps;
+      document.getElementById('reportQualityFlagsCount').textContent = data.qualityFlags.length;
+      document.getElementById('reportTopContributor').textContent = data.topContributor.name
+        ? `Top contributor: ${data.topContributor.name} (${data.topContributor.count} entries)` : '';
+
+      const allowanceNote = document.getElementById('reportAllowanceNote');
+      if (data.allowedOffDays > 0) {
+        allowanceNote.style.display = 'block';
+        allowanceNote.textContent = `Each employee gets up to ${data.allowedOffDays} zero-entry days this period without it counting against them — shown as "Off" below, not scored either way.`;
+      } else {
+        allowanceNote.style.display = 'none';
+      }
+
+      const narrativeWrap = document.getElementById('reportNarrativeWrap');
+      if (data.narrative) {
+        narrativeWrap.style.display = 'block';
+        document.getElementById('reportNarrativeBody').innerHTML = data.narrative;
+      } else {
+        narrativeWrap.style.display = 'none';
+      }
+
+      // Who logged, who didn't
+      const wl = document.getElementById('whoLoggedTable');
+      let wlHtml = '<tr><th>Employee</th><th>Dept</th>';
+      data.bucketLabels.forEach(l => wlHtml += `<th class="center">${l}</th>`);
+      wlHtml += '<th class="center">Total</th></tr>';
+      data.employees.forEach(e => {
+        const offNote = e.waivedOffDays > 0 ? ` <span style="color:var(--ink-soft); font-weight:400; font-size:11px;">(${e.waivedOffDays} off)</span>` : '';
+        wlHtml += `<tr><td>${e.name}${offNote}</td><td style="color:var(--ink-soft);">${e.dept}</td>`;
+        e.perBucket.forEach((c, i) => wlHtml += `<td class="center">${reportBadge(c, data.singleDayBuckets, e.perBucketWaived && e.perBucketWaived[i])}</td>`);
+        wlHtml += `<td class="center" style="font-weight:600;">${e.total}</td></tr>`;
+      });
+      wl.innerHTML = wlHtml;
+
+      // Department engagement — every active department, including ones
+      // with zero adoption, which the compliance table below can't show.
+      const de = document.getElementById('deptEngagementTable');
+      let deHtml = '<tr><th>Department</th><th class="center">Active headcount</th><th class="center">Logged this period</th><th class="center">Adoption</th></tr>';
+      data.departmentEngagement.forEach(e => {
+        const rowStyle = e.loggedCount === 0 ? 'background:var(--olive-100);' : '';
+        deHtml += `<tr style="${rowStyle}"><td>${e.dept}</td><td class="center">${e.activeHeadcount}</td><td class="center">${e.loggedCount}</td><td class="center" style="font-weight:600;">${e.adoptionPercent}%</td></tr>`;
+      });
+      de.innerHTML = deHtml;
+      const zeroNote = document.getElementById('reportZeroEngagementNote');
+      zeroNote.textContent = data.departmentsWithZeroEngagement.length
+        ? `${data.departmentsWithZeroEngagement.length} department(s) with zero engagement this period: ${data.departmentsWithZeroEngagement.join(', ')}`
+        : 'Every active department has at least some engagement this period.';
+
+      // Department compliance
+      const dc = document.getElementById('deptComplianceTable');
+      let dcHtml = '<tr><th>Department</th>';
+      data.bucketLabels.forEach(l => dcHtml += `<th class="center">${l}</th>`);
+      dcHtml += '</tr>';
+      data.departments.forEach(d => {
+        dcHtml += `<tr><td>${d.dept}</td>`;
+        d.perBucket.forEach(b => dcHtml += `<td class="center">${b.display}</td>`);
+        dcHtml += '</tr>';
+      });
+      dc.innerHTML = dcHtml || '<tr><td style="color:var(--ink-soft);">No departments have any entries yet this period.</td></tr>';
+
+      // Roster gaps, grouped by department
+      const gapsSection = document.getElementById('reportRosterGapsSection');
+      const gapDepts = Object.keys(data.rosterGapsByDept || {});
+      if (gapDepts.length) {
+        gapsSection.style.display = 'block';
+        document.getElementById('reportRosterGapsList').innerHTML = gapDepts.map(dept => `
+          <div class="entry-card">
+            <div class="ename">${dept} <span style="font-weight:400; color:var(--ink-soft);">(${data.rosterGapsByDept[dept].length})</span></div>
+            <div class="etext">${data.rosterGapsByDept[dept].join(', ')}</div>
+          </div>`).join('');
+      } else { gapsSection.style.display = 'none'; }
+
+      // Quality flags
+      const qSection = document.getElementById('reportQualitySection');
+      if (data.qualityFlags.length) {
+        qSection.style.display = 'block';
+        document.getElementById('reportQualityList').innerHTML = data.qualityFlags.map(f => {
+          const label = f.type === 'likely_duplicate' ? 'Possible duplicate' : '"No work" logged';
+          return `<div class="entry-card"><div class="ename">${f.employee}</div><div class="edept">${f.date}</div><div class="etext">${label}: ${f.detail}</div></div>`;
+        }).join('');
+      } else { qSection.style.display = 'none'; }
+
+      // Blockers
+      const bSection = document.getElementById('reportBlockersSection');
+      if (data.blockers.length) {
+        bSection.style.display = 'block';
+        let bHtml = '<tr><th>Date</th><th>Raised by</th><th>Item</th></tr>';
+        data.blockers.forEach(b => { bHtml += `<tr><td>${b.date}</td><td>${b.employee}</td><td style="white-space:normal;">${b.text}</td></tr>`; });
+        document.getElementById('blockersTable').innerHTML = bHtml;
+      } else { bSection.style.display = 'none'; }
+
+    } catch (err) {
+      statusMsg.textContent = "Couldn't load — " + err.message; statusMsg.className = "status-msg error";
+    }
+  }
+
   async function loadAdminTargets() {
     const list = document.getElementById('adminTargetsList');
     list.innerHTML = '<div class="empty-state">Loading…</div>';
@@ -1793,7 +2187,7 @@
         <div class="admin-row">
           <div class="ar-name">${emp.name}</div>
           <div class="ar-dept">${emp.department} · ${emp.code}</div>
-          ${emp.suggestedMonthlyTarget ? `<div class="field-hint">Suggested monthly target (3× gross salary of ₹${emp.grossSalary.toLocaleString('en-IN')}): ₹${emp.suggestedMonthlyTarget.toLocaleString('en-IN')}</div>` : ''}
+          ${emp.suggestedMonthlyTarget ? `<div class="field-hint">Suggested monthly target (${emp.gpTargetSalaryMultiplier}× gross salary of ₹${emp.grossSalary.toLocaleString('en-IN')}): ₹${emp.suggestedMonthlyTarget.toLocaleString('en-IN')}</div>` : ''}
           <div class="row2" style="margin-top:8px;">
             <div class="field"><label>Weekly lead target</label><input type="number" id="wlt_${emp.code}" placeholder="e.g. 6"></div>
             <div class="field"><label>Monthly revenue target (₹)</label><input type="number" id="mrt_${emp.code}" placeholder="${emp.suggestedMonthlyTarget || 'e.g. 500000'}"></div>
@@ -1823,6 +2217,117 @@
       statusMsg.className = data.ok ? "status-msg ok" : "status-msg error";
     } catch (err) {
       statusMsg.textContent = "Couldn't save — " + err.message; statusMsg.className = "status-msg error";
+    }
+  }
+
+  // ---- Admin: Sales GP approvals ----
+
+  async function loadGpApprovals() {
+    const list = document.getElementById('gpApprovalsList');
+    list.innerHTML = '<div class="empty-state">Loading…</div>';
+    try {
+      const res = await fetch(`${WEB_APP_URL}?action=getAllSalesGpEntries&code=${encodeURIComponent(session.code)}&pin=${encodeURIComponent(session.pin)}`);
+      const data = await res.json();
+      if (!data.ok) { list.innerHTML = `<div class="empty-state">${data.error || 'Could not load'}</div>`; return; }
+      if (!data.entries.length) { list.innerHTML = '<div class="empty-state">No sales logged yet</div>'; return; }
+      list.innerHTML = data.entries.map(en => {
+        const statusColor = en.status === 'Approved' ? 'var(--teal-700)' : (en.status === 'Rejected' ? 'var(--olive-700)' : 'var(--ink-soft)');
+        const gpValue = en.approvedGp !== '' && en.approvedGp !== undefined ? en.approvedGp : en.suggestedGp;
+        return `
+        <div class="admin-row">
+          <div class="ar-name">${en.clientName} <span style="font-weight:400; color:${statusColor};">(${en.status})</span></div>
+          <div class="ar-dept">${en.submittedByName} · ${en.entryId} · ${en.dateSubmitted}</div>
+          <div class="row2" style="margin-top:8px;">
+            <div class="field"><label>Client name</label><input type="text" id="gpc_${en.entryId}" value="${en.clientName}"></div>
+            <div class="field"><label>Invoice value (₹)</label><input type="number" id="gpi_${en.entryId}" value="${en.invoiceValue}"></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>Payment received (₹)</label><input type="number" id="gpr_${en.entryId}" value="${en.paymentReceived || 0}"></div>
+            <div class="field"><label>GP amount (₹) — suggested ₹${Number(en.suggestedGp).toLocaleString('en-IN')}</label><input type="number" id="gpg_${en.entryId}" value="${gpValue}"></div>
+          </div>
+          <div style="display:flex; gap:8px; margin-top:8px;">
+            <button type="button" class="submit-btn inline" style="flex:1;" onclick="reviewGpEntry('${en.entryId}','Approved')">Approve</button>
+            <button type="button" class="submit-btn inline" style="flex:1; background:var(--olive-600);" onclick="reviewGpEntry('${en.entryId}','Rejected')">Reject</button>
+          </div>
+          <button type="button" class="remove-link" style="margin-top:6px;" onclick="saveGpEdit('${en.entryId}')">Save edits without changing status</button>
+        </div>`;
+      }).join('');
+    } catch (err) {
+      list.innerHTML = `<div class="empty-state">Couldn't load — ${err.message}</div>`;
+    }
+  }
+
+  async function reviewGpEntry(entryId, status) {
+    const statusMsg = document.getElementById('gpApprovalsStatusMsg');
+    statusMsg.textContent = "Saving…"; statusMsg.className = "status-msg loading";
+    try {
+      const res = await fetch(WEB_APP_URL, {
+        method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          action: "reviewSalesGpEntry", code: session.code, pin: session.pin, entryId, status,
+          approvedGp: document.getElementById('gpg_' + entryId).value,
+        }),
+      });
+      const data = await res.json();
+      statusMsg.textContent = data.ok ? "Saved." : (data.error || "Couldn't save.");
+      statusMsg.className = data.ok ? "status-msg ok" : "status-msg error";
+      if (data.ok) { loadGpApprovals(); loadSalaryReview(); }
+    } catch (err) {
+      statusMsg.textContent = "Couldn't save — " + err.message; statusMsg.className = "status-msg error";
+    }
+  }
+
+  async function saveGpEdit(entryId) {
+    const statusMsg = document.getElementById('gpApprovalsStatusMsg');
+    statusMsg.textContent = "Saving…"; statusMsg.className = "status-msg loading";
+    try {
+      const res = await fetch(WEB_APP_URL, {
+        method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          action: "editSalesGpEntry", code: session.code, pin: session.pin, entryId,
+          clientName: document.getElementById('gpc_' + entryId).value,
+          invoiceValue: document.getElementById('gpi_' + entryId).value,
+          paymentReceived: document.getElementById('gpr_' + entryId).value,
+          approvedGp: document.getElementById('gpg_' + entryId).value,
+        }),
+      });
+      const data = await res.json();
+      statusMsg.textContent = data.ok ? "Edits saved." : (data.error || "Couldn't save.");
+      statusMsg.className = data.ok ? "status-msg ok" : "status-msg error";
+      if (data.ok) { loadGpApprovals(); loadSalaryReview(); }
+    } catch (err) {
+      statusMsg.textContent = "Couldn't save — " + err.message; statusMsg.className = "status-msg error";
+    }
+  }
+
+  // ---- Admin: Salary & incentive review ----
+
+  async function loadSalaryReview() {
+    const list = document.getElementById('salaryReviewList');
+    list.innerHTML = '<div class="empty-state">Loading…</div>';
+    try {
+      const res = await fetch(`${WEB_APP_URL}?action=getSalaryRecommendations&code=${encodeURIComponent(session.code)}&pin=${encodeURIComponent(session.pin)}`);
+      const data = await res.json();
+      if (!data.ok) { list.innerHTML = `<div class="empty-state">${data.error || 'Could not load'}</div>`; return; }
+      if (!data.results.length) { list.innerHTML = '<div class="empty-state">No sales employees found</div>'; return; }
+      list.innerHTML = data.results.map(r => {
+        let flag = '';
+        if (r.belowFloor) {
+          flag = `<div class="etext" style="color:var(--olive-700); font-weight:600;">Below floor — suggest next month's salary: ₹${Number(r.suggestedNextMonthlySalary).toLocaleString('en-IN')}</div>`;
+        }
+        if (r.incentiveEligible) {
+          flag += `<div class="etext" style="color:var(--teal-700); font-weight:600;">Incentive eligible — suggested ₹${Number(r.incentiveAmount).toLocaleString('en-IN')} (${r.lastFYLabel})</div>`;
+        }
+        return `<div class="entry-card">
+          <div class="ename">${r.name}</div>
+          <div class="edept">Monthly salary ₹${Number(r.monthlySalary).toLocaleString('en-IN')}</div>
+          <div class="etext">${r.lastQuarterLabel} GP: ₹${Number(r.lastQuarterGp).toLocaleString('en-IN')} (floor ₹${Number(r.quarterlyFloor).toLocaleString('en-IN')})</div>
+          <div class="etext">${r.lastFYLabel} GP: ₹${Number(r.lastFYGp).toLocaleString('en-IN')}</div>
+          ${flag || '<div class="etext" style="color:var(--ink-soft);">On track — no flags this period</div>'}
+        </div>`;
+      }).join('');
+    } catch (err) {
+      list.innerHTML = `<div class="empty-state">Couldn't load — ${err.message}</div>`;
     }
   }
 </script>

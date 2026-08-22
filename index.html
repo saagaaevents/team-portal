@@ -78,6 +78,8 @@
   .report-badge.low{ background:var(--olive-100); color:var(--olive-700); }
   .report-badge.zero{ background:var(--olive-600); color:#fff; }
   .report-badge.off{ background:var(--navy-100); color:var(--navy-700); }
+  .employee-link{ color:var(--teal-700); font-weight:600; text-decoration:none; border-bottom:1px dashed var(--teal-600); }
+  .employee-link:hover{ color:var(--teal-900); }
   .row2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   @media (max-width:380px){ .row2{ grid-template-columns:1fr; } }
 
@@ -784,7 +786,7 @@
 
     <!-- ---- REPORTS ---- -->
     <div id="mode-reports" style="display:none;">
-      <div class="tabs" style="padding:0; margin-bottom:12px;">
+      <div class="tabs" id="teamReportTabs" style="padding:0; margin-bottom:12px;">
         <div class="tab active" data-reportperiod="daily" onclick="setReportPeriod('daily')">Day</div>
         <div class="tab" data-reportperiod="weekly" onclick="setReportPeriod('weekly')">Week</div>
         <div class="tab" data-reportperiod="monthly" onclick="setReportPeriod('monthly')">Month</div>
@@ -834,6 +836,34 @@
         <div id="reportBlockersSection" style="display:none;">
           <h3 class="section-h">Open items &amp; blockers mentioned this period</h3>
           <div class="report-table-wrap"><table class="report-table" id="blockersTable"></table></div>
+        </div>
+      </div>
+
+      <!-- Individual employee drill-down — swaps in when a name is clicked -->
+      <div id="employeeDetailPanel" style="display:none;">
+        <button type="button" class="remove-link" style="margin-bottom:10px; font-size:13px;" onclick="closeEmployeeDetail()">&larr; Back to team view</button>
+        <div class="tabs" style="padding:0; margin-bottom:12px;">
+          <div class="tab active" data-empperiod="daily" onclick="setEmployeeDetailPeriod('daily')">Day</div>
+          <div class="tab" data-empperiod="weekly" onclick="setEmployeeDetailPeriod('weekly')">Week</div>
+          <div class="tab" data-empperiod="monthly" onclick="setEmployeeDetailPeriod('monthly')">Month</div>
+          <div class="tab" data-empperiod="quarterly" onclick="setEmployeeDetailPeriod('quarterly')">Quarter</div>
+          <div class="tab" data-empperiod="yearly" onclick="setEmployeeDetailPeriod('yearly')">Year</div>
+        </div>
+        <div class="status-msg" id="employeeDetailStatusMsg"></div>
+        <div id="employeeDetailContent" style="display:none;">
+          <h2 id="employeeDetailName" style="font-family:'Space Grotesk',sans-serif; color:var(--teal-900); font-size:17px; margin-bottom:2px;"></h2>
+          <p class="field-hint" id="employeeDetailMeta" style="margin-bottom:14px;"></p>
+          <div class="summary-row">
+            <div class="summary-card"><div class="num" id="empTotalEntries">—</div><div class="lbl">Entries logged</div></div>
+            <div class="summary-card"><div class="num" id="empComplianceRate">—</div><div class="lbl">Compliance rate</div></div>
+          </div>
+          <p class="field-hint" id="empOffDaysNote" style="margin:10px 0 16px;"></p>
+          <h3 class="section-h">Entries by period</h3>
+          <div class="report-table-wrap"><table class="report-table" id="empBucketTable"></table></div>
+          <div id="empRawEntriesSection" style="display:none;">
+            <h3 class="section-h">What they logged</h3>
+            <div id="empRawEntriesList"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -2054,6 +2084,88 @@
     loadActivityReport(period);
   }
 
+  // ---- Individual employee drill-down ----
+  let currentEmployeeDetailCode = null;
+  let currentEmployeeDetailName = null;
+  let currentEmployeeDetailPeriod = 'daily';
+
+  function showEmployeeDetail(code, name) {
+    currentEmployeeDetailCode = code;
+    currentEmployeeDetailName = name;
+    currentEmployeeDetailPeriod = 'daily';
+    document.querySelectorAll('#employeeDetailPanel .tab').forEach(el => el.classList.toggle('active', el.dataset.empperiod === 'daily'));
+    document.getElementById('teamReportTabs').style.display = 'none';
+    document.getElementById('reportStatusMsg').style.display = 'none';
+    document.getElementById('reportContent').style.display = 'none';
+    document.getElementById('employeeDetailPanel').style.display = 'block';
+    loadEmployeeDetail();
+  }
+
+  function closeEmployeeDetail() {
+    document.getElementById('employeeDetailPanel').style.display = 'none';
+    document.getElementById('teamReportTabs').style.display = 'flex';
+    document.getElementById('reportStatusMsg').style.display = 'block';
+    document.getElementById('reportContent').style.display = 'block';
+  }
+
+  function setEmployeeDetailPeriod(period) {
+    currentEmployeeDetailPeriod = period;
+    document.querySelectorAll('#employeeDetailPanel .tab').forEach(el => el.classList.toggle('active', el.dataset.empperiod === period));
+    loadEmployeeDetail();
+  }
+
+  async function loadEmployeeDetail() {
+    const statusMsg = document.getElementById('employeeDetailStatusMsg');
+    const content = document.getElementById('employeeDetailContent');
+    statusMsg.textContent = "Loading…"; statusMsg.className = "status-msg loading";
+    content.style.display = 'none';
+
+    try {
+      const url = `${WEB_APP_URL}?action=getEmployeeActivityDetail&code=${encodeURIComponent(session.code)}&pin=${encodeURIComponent(session.pin)}&targetCode=${encodeURIComponent(currentEmployeeDetailCode)}&period=${currentEmployeeDetailPeriod}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (!data.ok) { statusMsg.textContent = data.error || "Couldn't load."; statusMsg.className = "status-msg error"; return; }
+      statusMsg.textContent = ""; content.style.display = 'block';
+
+      document.getElementById('employeeDetailName').textContent = data.employeeName;
+      document.getElementById('employeeDetailMeta').textContent = `${data.employeeDept} · ${data.periodLabel}`;
+      document.getElementById('empTotalEntries').textContent = data.totalEntries;
+      document.getElementById('empComplianceRate').textContent = data.complianceRate + '%';
+
+      const offNote = document.getElementById('empOffDaysNote');
+      if (data.waivedOffDays > 0 || data.excessZeroDays > 0) {
+        offNote.textContent = `${data.waivedOffDays} day(s) waived as time off` + (data.excessZeroDays > 0 ? `, ${data.excessZeroDays} zero-entry day(s) beyond the allowance` : '');
+      } else { offNote.textContent = ''; }
+
+      const bt = document.getElementById('empBucketTable');
+      let btHtml = '<tr><th>Period</th><th class="center">Entries</th></tr>';
+      data.bucketLabels.forEach((l, i) => {
+        const cell = data.singleDayBuckets ? reportBadge(data.perBucket[i], true, data.perBucketWaived && data.perBucketWaived[i]) : data.perBucket[i];
+        btHtml += `<tr><td>${l}</td><td class="center">${cell}</td></tr>`;
+      });
+      bt.innerHTML = btHtml;
+
+      const rawSection = document.getElementById('empRawEntriesSection');
+      if (data.rawEntries && data.rawEntries.length) {
+        rawSection.style.display = 'block';
+        document.getElementById('empRawEntriesList').innerHTML = data.rawEntries.map(e => `
+          <div class="entry-card">
+            <div class="ename">${e.date} · ${e.slot}</div>
+            <div class="edept">${e.entryDept}</div>
+            <div class="etext">${e.whatIDid}</div>
+            ${e.pending ? `<div class="etext" style="color:var(--olive-700);">Pending: ${e.pending}</div>` : ''}
+          </div>`).join('');
+      } else if (data.rawEntries) {
+        rawSection.style.display = 'block';
+        document.getElementById('empRawEntriesList').innerHTML = '<div class="empty-state">No entries this period</div>';
+      } else {
+        rawSection.style.display = 'none';
+      }
+    } catch (err) {
+      statusMsg.textContent = "Couldn't load — " + err.message; statusMsg.className = "status-msg error";
+    }
+  }
+
   function reportBadge(count, singleDayBuckets, isWaived) {
     if (isWaived) return `<span class="report-badge off">Off</span>`;
     if (!singleDayBuckets) return String(count); // aggregated bucket: plain number, "compliant" is a per-day idea
@@ -2106,7 +2218,7 @@
       wlHtml += '<th class="center">Total</th></tr>';
       data.employees.forEach(e => {
         const offNote = e.waivedOffDays > 0 ? ` <span style="color:var(--ink-soft); font-weight:400; font-size:11px;">(${e.waivedOffDays} off)</span>` : '';
-        wlHtml += `<tr><td>${e.name}${offNote}</td><td style="color:var(--ink-soft);">${e.dept}</td>`;
+        wlHtml += `<tr><td><a href="#" class="employee-link" onclick="showEmployeeDetail('${e.code}','${e.name.replace(/'/g, "\\'")}'); return false;">${e.name}</a>${offNote}</td><td style="color:var(--ink-soft);">${e.dept}</td>`;
         e.perBucket.forEach((c, i) => wlHtml += `<td class="center">${reportBadge(c, data.singleDayBuckets, e.perBucketWaived && e.perBucketWaived[i])}</td>`);
         wlHtml += `<td class="center" style="font-weight:600;">${e.total}</td></tr>`;
       });
@@ -2146,7 +2258,7 @@
         document.getElementById('reportRosterGapsList').innerHTML = gapDepts.map(dept => `
           <div class="entry-card">
             <div class="ename">${dept} <span style="font-weight:400; color:var(--ink-soft);">(${data.rosterGapsByDept[dept].length})</span></div>
-            <div class="etext">${data.rosterGapsByDept[dept].join(', ')}</div>
+            <div class="etext">${data.rosterGapsByDept[dept].map(e => `<a href="#" class="employee-link" onclick="showEmployeeDetail('${e.code}','${e.name.replace(/'/g, "\\'")}'); return false;">${e.name}</a>`).join(', ')}</div>
           </div>`).join('');
       } else { gapsSection.style.display = 'none'; }
 
@@ -2187,10 +2299,10 @@
         <div class="admin-row">
           <div class="ar-name">${emp.name}</div>
           <div class="ar-dept">${emp.department} · ${emp.code}</div>
-          ${emp.suggestedMonthlyTarget ? `<div class="field-hint">Suggested monthly target (${emp.gpTargetSalaryMultiplier}× gross salary of ₹${emp.grossSalary.toLocaleString('en-IN')}): ₹${emp.suggestedMonthlyTarget.toLocaleString('en-IN')}</div>` : ''}
+          ${emp.suggestedMonthlyInvoiceTarget ? `<div class="field-hint">Suggested monthly invoice value target (to hit ${emp.gpTargetSalaryMultiplier}× gross salary in GP, at the assumed margin): ₹${emp.suggestedMonthlyInvoiceTarget.toLocaleString('en-IN')}</div>` : ''}
           <div class="row2" style="margin-top:8px;">
             <div class="field"><label>Weekly lead target</label><input type="number" id="wlt_${emp.code}" placeholder="e.g. 6"></div>
-            <div class="field"><label>Monthly revenue target (₹)</label><input type="number" id="mrt_${emp.code}" placeholder="${emp.suggestedMonthlyTarget || 'e.g. 500000'}"></div>
+            <div class="field"><label>Monthly revenue target (₹)</label><input type="number" id="mrt_${emp.code}" placeholder="${emp.suggestedMonthlyInvoiceTarget || 'e.g. 4750000'}"></div>
           </div>
           <div class="field"><label>Annual revenue target (₹) — for yearly incentive eligibility</label><input type="number" id="art_${emp.code}" placeholder="e.g. 6000000"></div>
           <button type="button" class="submit-btn inline" onclick="saveTargets('${emp.code}')">Save</button>
